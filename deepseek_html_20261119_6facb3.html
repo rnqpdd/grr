@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0C0C0C">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GRR">
+    <title>GRR</title>
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+
+    <style>
+        :root {
+            --bg: #0C0C0C;
+            --text: #FFFFFF;
+            --card: #1A1A1A;
+            --border: #2A2A2A;
+            --muted: #888888;
+            /* Шрифт как на iPhone */
+            --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+                    "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        html, body {
+            background: var(--bg); color: var(--text);
+            font-family: var(--font);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            letter-spacing: -0.2px;
+        }
+        body {
+            display: flex; justify-content: center; min-height: 100vh; overflow: hidden;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+        #app {
+            width: 100%; max-width: 420px; height: 100vh;
+            padding: 20px; display: flex; flex-direction: column; position: relative;
+        }
+        .screen {
+            display: none; flex-direction: column; height: 100%;
+            animation: fadeIn 0.25s ease;
+        }
+        .screen.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-shrink: 0; }
+        .logo { font-size: 26px; font-weight: 900; letter-spacing: -1.2px; }
+        .icon-btn {
+            background: var(--card); border: none; color: var(--text);
+            width: 42px; height: 42px; border-radius: 50%; font-size: 18px;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            font-family: var(--font);
+        }
+        .icon-btn:active { opacity: 0.6; }
+
+        .scroll-area { flex: 1; overflow-y: auto; padding-bottom: 100px; -webkit-overflow-scrolling: touch; }
+        .scroll-area::-webkit-scrollbar { display: none; }
+
+        .card { background: var(--card); border-radius: 22px; padding: 20px; margin-bottom: 14px; }
+        .card-title { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 12px; font-weight: 600; }
+        .big-number { font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -2px; }
+        .card-sub { font-size: 15px; color: var(--muted); margin-top: 6px; }
+        .stats-row { display: flex; justify-content: space-between; margin-top: 18px; border-top: 1px solid var(--border); padding-top: 16px; }
+        .stat-item { text-align: center; flex: 1; }
+        .stat-value { font-size: 18px; font-weight: 700; }
+        .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+        .day-switch { display: flex; gap: 8px; margin-bottom: 14px; }
+        .day-tab {
+            flex: 1; padding: 12px; border-radius: 14px; background: var(--card);
+            border: 1px solid transparent; color: var(--muted); font-weight: 600;
+            font-size: 15px; cursor: pointer; text-align: center; font-family: var(--font);
+        }
+        .day-tab.active { background: var(--text); color: var(--bg); }
+
+        .exercise-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 0; border-bottom: 1px solid var(--border);
+        }
+        .exercise-item:last-child { border-bottom: none; }
+        .ex-info { flex: 1; }
+        .ex-name { font-size: 16px; font-weight: 600; }
+        .ex-meta { font-size: 13px; color: var(--muted); margin-top: 3px; }
+        .ex-actions { display: flex; gap: 8px; }
+        .mini-btn {
+            background: transparent; border: 1px solid var(--border); color: var(--text);
+            width: 34px; height: 34px; border-radius: 10px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 14px;
+            font-family: var(--font);
+        }
+        .mini-btn:active { opacity: 0.6; }
+        .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 24px 0; line-height: 1.5; }
+
+        .btn {
+            background: var(--text); color: var(--bg); border: none;
+            border-radius: 30px; padding: 16px 30px; font-size: 17px; font-weight: 700;
+            width: 100%; cursor: pointer; font-family: var(--font); letter-spacing: -0.3px;
+        }
+        .btn:active { opacity: 0.75; }
+        .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+        .btn-sm { padding: 12px 20px; font-size: 14px; border-radius: 20px; }
+
+        .bottom-fixed {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 20px; background: linear-gradient(transparent, var(--bg) 30%);
+        }
+
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+            display: none; align-items: flex-end; justify-content: center; z-index: 100;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--card); width: 100%; max-width: 420px;
+            border-radius: 24px 24px 0 0; padding: 24px 20px 30px;
+            animation: slideUp 0.25s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal h3 { font-size: 20px; margin-bottom: 18px; letter-spacing: -0.5px; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; display: block; }
+        .form-input {
+            width: 100%; background: var(--bg); border: 1px solid var(--border);
+            color: var(--text); padding: 14px 16px; border-radius: 14px;
+            font-size: 16px; font-family: var(--font); outline: none;
+        }
+        .form-input:focus { border-color: var(--text); }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-actions .btn { flex: 1; }
+
+        .workout-header { text-align: center; margin-top: 30px; }
+        .ex-title { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 10px; }
+        .ex-main-name { font-size: 34px; font-weight: 800; letter-spacing: -1px; }
+        .big-display { text-align: center; margin: 50px 0; }
+        .big-display .num { font-size: 88px; font-weight: 900; line-height: 1; letter-spacing: -3px; }
+        .big-display .label { font-size: 18px; color: var(--muted); margin-top: 10px; }
+        .progress-bar { height: 6px; background: var(--card); border-radius: 3px; margin: 30px 0; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--text); transition: width 0.3s; }
+        .workout-controls { display: flex; flex-direction: column; gap: 12px; margin-top: auto; padding-bottom: 20px; }
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <!-- ================= ГЛАВНЫЙ ЭКРАН ================= -->
+    <div id="screen-home" class="screen active">
+        <div class="header">
+            <div class="logo">GRR</div>
+            <button class="icon-btn" onclick="openSettings()">⚙</button>
+        </div>
+        <div class="scroll-area">
+            <!-- Карточка: кол-во упражнений -->
+            <div class="card">
+                <div class="big-number" id="home-ex-count">0</div>
+                <div class="card-sub">упражнений в плане</div>
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-total">0</div>
+                        <div class="stat-label">повторений</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-sessions">0</div>
+                        <div class="stat-label">трен.</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="stat-streak">0</div>
+                        <div class="stat-label">дней</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="day-switch">
+                <button class="day-tab active" data-day="0" onclick="switchPlanDay(0)">День A</button>
+                <button class="day-tab" data-day="1" onclick="switchPlanDay(1)">День B</button>
+            </div>
+
+            <div class="card">
+                <div class="card-title">План тренировки</div>
+                <div id="plan-list"></div>
+            </div>
+        </div>
+        <div class="bottom-fixed">
+            <button class="btn" onclick="startWorkout()">start workout</button>
+        </div>
+    </div>
+
+    <!-- ================= ЭКРАН ТРЕНИРОВКИ ================= -->
+    <div id="screen-workout" class="screen">
+        <div class="header">
+            <div class="logo" style="font-size:20px;">GRR</div>
+            <button class="icon-btn" onclick="stopWorkout()">✕</button>
+        </div>
+        <div class="workout-header">
+            <div class="ex-title" id="w-ex-counter">Упражнение 1 из 3</div>
+            <div class="ex-main-name" id="w-ex-name">Отжимания</div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="w-progress" style="width:0%"></div></div>
+        <div class="big-display">
+            <div class="num" id="w-display">GO</div>
+            <div class="label" id="w-label">Подход 1 из 3</div>
+        </div>
+        <div class="workout-controls">
+            <button class="btn" id="w-btn" onclick="nextStep()">Выполнить!</button>
+            <button class="btn btn-outline" onclick="stopWorkout()">Завершить</button>
+        </div>
+    </div>
+
+    <!-- ================= ЭКРАН НАСТРОЕК ================= -->
+    <div id="screen-settings" class="screen">
+        <div class="header">
+            <div class="logo" style="font-size:20px;">Настройки</div>
+            <button class="icon-btn" onclick="closeSettings()">✕</button>
+        </div>
+        <div class="scroll-area">
+            <div class="card">
+                <div class="card-title">Данные</div>
+                <button class="btn btn-outline btn-sm" style="width:100%; margin-bottom:10px;" onclick="resetProgress()">Сбросить прогресс</button>
+            </div>
+            <div class="card">
+                <div class="card-title">О приложении</div>
+                <p style="font-size:14px; color:var(--muted); line-height:1.6;">
+                    GRR — минималистичный трекер тренировок.<br>
+                    Создай свой план на 2 дня, которые чередуются.
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ================= МОДАЛКА РЕДАКТИРОВАНИЯ УПРАЖНЕНИЯ ================= -->
+<div class="modal-overlay" id="modal-exercise">
+    <div class="modal">
+        <h3 id="modal-ex-title">Добавить упражнение</h3>
+        <div class="form-group">
+            <label class="form-label">Название</label>
+            <input type="text" class="form-input" id="inp-name" placeholder="Например: Отжимания">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Подходов</label>
+            <input type="number" class="form-input" id="inp-sets" value="3" min="1" max="20">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Повторений в подходе</label>
+            <input type="number" class="form-input" id="inp-reps" value="10" min="1" max="999">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeExerciseModal()">Отмена</button>
+            <button class="btn" onclick="saveExercise()">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ================== СОСТОЯНИЕ ================== */
+const STORAGE_KEY = 'grr_data_v1';
+
+const defaultData = {
+    plans: [
+        [
+            { name: 'Отжимания', sets: 3, reps: 10 },
+            { name: 'Приседания', sets: 3, reps: 15 },
+            { name: 'Планка', sets: 3, reps: 30 }
+        ],
+        [
+            { name: 'Подтягивания', sets: 3, reps: 5 },
+            { name: 'Выпады', sets: 3, reps: 12 },
+            { name: 'Скручивания', sets: 3, reps: 20 }
+        ]
+    ],
+    currentDay: 0,
+    stats: { total: 0, sessions: 0, streak: 0, lastDate: null, today: 0, todayDate: null }
+};
+
+let data = loadData();
+let currentPlanDay = 0;
+let editingIndex = -1;
+
+let wExIndex = 0, wSet = 1, wState = 'work';
+let timerInterval = null, timeLeft = 0;
+
+/* ================== ХРАНИЛИЩЕ ================== */
+function loadData() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return JSON.parse(JSON.stringify(defaultData));
+        return JSON.parse(raw);
+    } catch (e) { return JSON.parse(JSON.stringify(defaultData)); }
+}
+function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+/* ================== ГЛАВНЫЙ ЭКРАН ================== */
+function renderHome() {
+    const plan = data.plans[currentPlanDay] || [];
+    const exCount = plan.length;
+
+    document.getElementById('home-ex-count').textContent = exCount;
+    document.getElementById('stat-total').textContent = data.stats.total;
+    document.getElementById('stat-sessions').textContent = data.stats.sessions;
+    document.getElementById('stat-streak').textContent = data.stats.streak;
+
+    document.querySelectorAll('.day-tab').forEach((t, i) => {
+        t.classList.toggle('active', i === currentPlanDay);
+    });
+
+    renderPlanList();
+}
+
+function renderPlanList() {
+    const list = document.getElementById('plan-list');
+    const plan = data.plans[currentPlanDay] || [];
+    list.innerHTML = '';
+
+    if (plan.length === 0) {
+        list.innerHTML = '<div class="empty">Нет упражнений.<br>Добавьте первое 👇</div>';
+    } else {
+        plan.forEach((ex, i) => {
+            const div = document.createElement('div');
+            div.className = 'exercise-item';
+            div.innerHTML = `
+                <div class="ex-info">
+                    <div class="ex-name">${escapeHtml(ex.name)}</div>
+                    <div class="ex-meta">${ex.sets} подх. × ${ex.reps} повт.</div>
+                </div>
+                <div class="ex-actions">
+                    <button class="mini-btn" onclick="editExercise(${i})">✎</button>
+                    <button class="mini-btn" onclick="deleteExercise(${i})">✕</button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    const addBtn = document.createElement('div');
+    addBtn.style.marginTop = '14px';
+    addBtn.innerHTML = `<button class="btn btn-outline btn-sm" style="width:100%;" onclick="openExerciseModal(-1)">+ Добавить упражнение</button>`;
+    list.appendChild(addBtn);
+}
+
+function switchPlanDay(idx) {
+    currentPlanDay = idx;
+    renderHome();
+}
+
+/* ================== РЕДАКТИРОВАНИЕ ПЛАНА ================== */
+function openExerciseModal(index) {
+    editingIndex = index;
+    const modal = document.getElementById('modal-exercise');
+    const title = document.getElementById('modal-ex-title');
+    const nameInp = document.getElementById('inp-name');
+    const setsInp = document.getElementById('inp-sets');
+    const repsInp = document.getElementById('inp-reps');
+
+    if (index >= 0) {
+        const ex = data.plans[currentPlanDay][index];
+        title.textContent = 'Редактировать';
+        nameInp.value = ex.name;
+        setsInp.value = ex.sets;
+        repsInp.value = ex.reps;
+    } else {
+        title.textContent = 'Добавить упражнение';
+        nameInp.value = '';
+        setsInp.value = 3;
+        repsInp.value = 10;
+    }
+    modal.classList.add('active');
+    setTimeout(() => nameInp.focus(), 200);
+}
+
+function closeExerciseModal() {
+    document.getElementById('modal-exercise').classList.remove('active');
+}
+
+function saveExercise() {
+    const name = document.getElementById('inp-name').value.trim();
+    const sets = parseInt(document.getElementById('inp-sets').value) || 1;
+    const reps = parseInt(document.getElementById('inp-reps').value) || 1;
+
+    if (!name) { alert('Введите название'); return; }
+
+    const ex = { name, sets, reps };
+    if (editingIndex >= 0) {
+        data.plans[currentPlanDay][editingIndex] = ex;
+    } else {
+        data.plans[currentPlanDay].push(ex);
+    }
+    saveData();
+    closeExerciseModal();
+    renderHome();
+}
+
+function editExercise(i) { openExerciseModal(i); }
+
+function deleteExercise(i) {
+    if (!confirm('Удалить упражнение?')) return;
+    data.plans[currentPlanDay].splice(i, 1);
+    saveData();
+    renderHome();
+}
+
+function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ================== НАСТРОЙКИ ================== */
+function openSettings() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-settings').classList.add('active');
+}
+function closeSettings() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-home').classList.add('active');
+    renderHome();
+}
+function resetProgress() {
+    if (!confirm('Сбросить всю статистику?')) return;
+    data.stats = { total: 0, sessions: 0, streak: 0, lastDate: null, today: 0, todayDate: null };
+    saveData();
+    renderHome();
+    alert('Прогресс сброшен');
+}
+
+/* ================== ТРЕНИРОВКА ================== */
+function startWorkout() {
+    const plan = data.plans[currentPlanDay];
+    if (!plan || plan.length === 0) {
+        alert('Сначала добавьте упражнения в план!');
+        return;
+    }
+    wExIndex = 0; wSet = 1; wState = 'work';
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-workout').classList.add('active');
+    renderWorkout();
+}
+
+function renderWorkout() {
+    const plan = data.plans[currentPlanDay];
+    const ex = plan[wExIndex];
+    const totalSets = plan.reduce((a, e) => a + e.sets, 0);
+    const doneSets = plan.slice(0, wExIndex).reduce((a, e) => a + e.sets, 0) + (wSet - 1);
+    document.getElementById('w-progress').style.width = (doneSets / totalSets * 100) + '%';
+
+    if (wState === 'work') {
+        document.getElementById('w-ex-name').textContent = ex.name;
+        document.getElementById('w-ex-counter').textContent = `Упражнение ${wExIndex + 1} из ${plan.length}`;
+        document.getElementById('w-display').textContent = 'GO';
+        document.getElementById('w-label').textContent = `Подход ${wSet} из ${ex.sets} · ${ex.reps} повт.`;
+        const btn = document.getElementById('w-btn');
+        btn.textContent = 'Выполнить!';
+        btn.style.background = 'var(--text)';
+        btn.style.color = 'var(--bg)';
+        stopTimer();
+    } else if (wState === 'rest_90') {
+        document.getElementById('w-ex-name').textContent = 'Отдых';
+        document.getElementById('w-label').textContent = '90 секунд';
+        document.getElementById('w-btn').textContent = 'Пропустить';
+        document.getElementById('w-btn').style.background = 'transparent';
+        document.getElementById('w-btn').style.color = 'var(--text)';
+        startTimer(90);
+    } else if (wState === 'rest_120') {
+        document.getElementById('w-ex-name').textContent = 'Отдых';
+        document.getElementById('w-label').textContent = '120 секунд';
+        document.getElementById('w-btn').textContent = 'Пропустить';
+        document.getElementById('w-btn').style.background = 'transparent';
+        document.getElementById('w-btn').style.color = 'var(--text)';
+        startTimer(120);
+    } else if (wState === 'finished') {
+        document.getElementById('w-ex-name').textContent = 'Готово!';
+        document.getElementById('w-ex-counter').textContent = 'Тренировка завершена';
+        document.getElementById('w-display').textContent = '🏆';
+        document.getElementById('w-label').textContent = 'Отличная работа';
+        document.getElementById('w-btn').textContent = 'На главную';
+        document.getElementById('w-btn').style.background = 'var(--text)';
+        document.getElementById('w-btn').style.color = 'var(--bg)';
+        document.getElementById('w-progress').style.width = '100%';
+        stopTimer();
+    }
+}
+
+function nextStep() {
+    const plan = data.plans[currentPlanDay];
+    const ex = plan[wExIndex];
+
+    if (wState === 'work') {
+        data.stats.total += ex.reps;
+        saveData();
+
+        if (wSet < ex.sets) {
+            wSet++;
+            wState = 'rest_90';
+        } else {
+            if (wExIndex < plan.length - 1) {
+                wState = 'rest_120';
+            } else {
+                finishWorkout();
+                return;
+            }
+        }
+    } else if (wState === 'rest_90' || wState === 'rest_120') {
+        stopTimer();
+        if (wState === 'rest_120') {
+            wExIndex++;
+            wSet = 1;
+        }
+        wState = 'work';
+    } else if (wState === 'finished') {
+        stopWorkout();
+        return;
+    }
+    renderWorkout();
+}
+
+function finishWorkout() {
+    data.stats.sessions++;
+    const today = new Date().toDateString();
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    if (data.stats.lastDate === yesterday) data.stats.streak++;
+    else if (data.stats.lastDate !== today) data.stats.streak = 1;
+    data.stats.lastDate = today;
+
+    data.currentDay = (currentPlanDay + 1) % 2;
+    currentPlanDay = data.currentDay;
+    saveData();
+
+    wState = 'finished';
+    renderWorkout();
+}
+
+function stopWorkout() {
+    stopTimer();
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-home').classList.add('active');
+    renderHome();
+}
+
+/* ================== ТАЙМЕР ================== */
+function startTimer(seconds) {
+    stopTimer();
+    timeLeft = seconds;
+    updateTimerDisplay();
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+        if (timeLeft <= 0) {
+            stopTimer();
+            nextStep();
+        }
+    }, 1000);
+}
+function updateTimerDisplay() {
+    const m = Math.floor(timeLeft / 60);
+    const s = timeLeft % 60;
+    document.getElementById('w-display').textContent =
+        `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
+
+/* ================== PWA ================== */
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(console.error);
+    });
+}
+
+/* ================== INIT ================== */
+currentPlanDay = data.currentDay || 0;
+renderHome();
+</script>
+</body>
+</html>
